@@ -27,4 +27,16 @@ def telegram(msg):
 
 msg = ''
 
+if __name__=="__main__":
+    try:
+        r=redis.StrictRedis(host=_host,port=_port,password=_passwd)
+        cookie_flag="valid"
+        battery_percent=""
+        tmp_flag=r.get('w-cookie')
+        tmp_battery_percent=r.get('percent')
+
+        if len(tmp_flag)==2:
+            cookie_flag="expire"
+        msg='weibo_cookie_status: ' + cookie_flag + ', battery_percent: ' + tmp_battery_percent
+        telegram(msg)
 
