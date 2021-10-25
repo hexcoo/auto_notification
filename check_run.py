@@ -27,7 +27,7 @@ def telegram(msg):
 
 msg = ''
 
-#if __name__=="__main__":
+if __name__=='__main__':
     try:
         r=redis.StrictRedis(host=_host,port=_port,password=_passwd)
         cookie_flag="valid"
