@@ -17,7 +17,7 @@ def telegram(msg):
         ('chat_id', _chat_id),
         ('text', msg + '\n\n' + desp)
     )
-    response = requests.post('https://' + _tghost + '/bot' + _tgbot_token + '/sendMessage', data=data)
+    response = req.post('https://' + _tghost + '/bot' + _tgbot_token + '/sendMessage', data=data)
     if response.status_code != 200:
         print('Telegram Bot 推送失败')
     else:
