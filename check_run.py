@@ -25,6 +25,18 @@ def telegram(msg):
         print('Telegram Bot 推送成功')
 
 
-msg = 'this massage comes from github!!'
+msg = ''
 
-telegram(msg)
+if __name__ == "__main__":
+    try:
+        r = redis.StrictRedis(host=_host,port=_port,password=_passwd)
+        cookie_flag = "valid"
+        battery_percent = ""
+        tmp_flag = r.get('w-cookie')
+        tmp_battery_percent = r.get('percent')
+
+        if len(tmp_flag) == 2:
+            cookie_flag = "explire"
+
+        msg = 'weibo_cookie status: ' + cookie_flag + ', battery_percent: ' + tmp_battery_percent
+        telegram(msg)
