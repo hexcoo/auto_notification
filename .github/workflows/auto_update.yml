@@ -1,16 +1,7 @@
-name: auto_check
+name: auto_check_cron
 on: 
-  release:
-    types: [published]
-  push:
-    tags:
-    - 'v*'
-  #  branches: 
-  #    - master
   schedule:
     - cron: '*/6 * * * *'
-  watch:
-    types: [started]
    
 jobs:
   build:
