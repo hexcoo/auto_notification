@@ -40,3 +40,4 @@ if __name__ == "__main__":
 
         msg = 'weibo_cookie status: ' + cookie_flag + ', battery_percent: ' + tmp_battery_percent
         telegram(msg)
+    except Exception as e:
