@@ -1,3 +1,4 @@
+name: auto_check
 on: 
   release:
     types: [published]
