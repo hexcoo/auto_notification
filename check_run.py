@@ -24,5 +24,6 @@ def telegram(msg):
         print('Telegram Bot 推送成功')
 
 
-msg = 'this massage comes from github'
+msg = 'this massage comes from github!!'
+
 telegram(msg)
