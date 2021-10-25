@@ -1,4 +1,4 @@
-name: auto_check_cron
+name: auto_check_notice
 on: 
   schedule:
     - cron: '*/6 * * * *'
@@ -10,7 +10,8 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@master
-    - name: Install requests and nacl #安装requests模块
+    - name: Install requests and redis and run #安装requests模块
       run: |
-        pip install requests
-        echo run
+        pip install requests redis
+        python check_run.py
+
