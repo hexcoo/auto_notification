@@ -14,6 +14,10 @@ jobs:
     - name: Checkout
       uses: actions/checkout@master
     - name: Install requests and redis and run #安装requests模块
+      env: 
+        #github的账号信息
+        TG_TOKEN: ${{ secrets.TG_TOKEN }} 
+        TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
       run: |
         pip install requests redis
         python check_run.py
