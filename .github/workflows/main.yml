@@ -1,12 +1,11 @@
 name: Auto update
 on: 
-  release:
-    types: [published]
+#  release:
+#    types: [published]
   push:
-    tags:
-    - 'v*'
-  #  branches: 
-  #    - master
+    branches:
+      - main
+
   schedule:
     - cron: '*/5 * * * *'
   watch:
