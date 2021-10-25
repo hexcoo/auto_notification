@@ -11,6 +11,7 @@ _tghost = 'api.telegram.org'
 _tgbot_token = os.getenv('TG_TOKEN')
 _chat_id = os.getenv('TG_CHAT_ID')
 desp = ''
+
 # Telegram Bot Push https://core.telegram.org/bots/api#authorizing-your-bot
 def telegram(msg):
     data = (
