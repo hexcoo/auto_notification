@@ -40,4 +40,4 @@ try:
     msg='weibo_cookie_status: ' + cookie_flag + ', battery_percent: ' + tmp_battery_percent
     telegram(msg)
 except Exception as e:
-
+    print('bad')
