@@ -30,7 +30,7 @@ msg = ''
 
 
 try:
-    r=redis.StrictRedis(host=_host,port=_port,password=_passwd)
+    r=redis.StrictRedis(host=_host,port=_port,password=_passwd, decode_responses=True)
     cookie_flag="valid"
     battery_percent=""
     tmp_flag=r.get('w-cookie')
