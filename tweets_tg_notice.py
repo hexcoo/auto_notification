@@ -193,7 +193,7 @@ def main():
         r = redis.StrictRedis(host=r_host,port=r_port,password=r_passwd, charset="utf-8", decode_responses=True)
         tmp_date = r.get("297811887")
         #add bear_token
-        print(c.Bearer_token)
+    #    print(c.Bearer_token)
         c.Bearer_token = r.get('bear_token')
         if not None == tmp_date and len(tmp_date) > 2:
             #get new Since
