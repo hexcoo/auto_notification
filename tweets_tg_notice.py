@@ -1,7 +1,7 @@
 import twint
 import os
 import sys
-import datetime
+from datetime import datetime
 
 #rewrite twint method tweets
 import logging as logme
@@ -11,7 +11,7 @@ from asyncio import get_event_loop, TimeoutError, ensure_future, new_event_loop,
 from twint.tweet import Tweet
 from twint.output import datecheck
 from twint.output import _output
-from twint.output import _formatDateTime
+
 
 #for telegram bot 
 import requests as req
@@ -29,7 +29,11 @@ _chat_id = os.getenv('TG_CHAT_ID')
 
 desp = ''
 
-
+def formatDateTime(datetimestamp):
+    try:
+        return int(datetime.strptime(datetimestamp, "%Y-%m-%d %H:%M:%S").timestamp())
+    except ValueError:
+        return int(datetime.strptime(datetimestamp, "%Y-%m-%d").timestamp())
 
 def tg_bot_send(msg):
     data = (
@@ -205,7 +209,7 @@ def main():
         #add 1 sec
 #        '''
         if count > 0:
-            new_timestap = _formatDateTime(c.Since) + 1
+            new_timestap = formatDateTime(c.Since) + 1
             new_since = datetime.datetime.fromtimestamp(new_timestap).strftime('%Y-%m-%d %H:%M:%S')
    
             r.set('297811887', new_since)
