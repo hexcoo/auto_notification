@@ -20,7 +20,8 @@ jobs:
         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         REDIS_PWD: ${{ secrets.REDIS_PWD }}
       run: |
-        pip install redis twint
+        pip install redis
+        pip install --user --upgrade git+https://github.com/twintproject/twint.git@origin/master
         python check_run.py
         python tweets_tg_notice.py
 
