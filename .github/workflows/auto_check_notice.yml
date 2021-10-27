@@ -14,14 +14,20 @@ jobs:
     - name: Checkout
       uses: actions/checkout@master
     - name: Install requests and redis and run #安装requests模块
-      env: 
+      # env: 
         #github的账号信息
-        TG_TOKEN: ${{ secrets.TG_TOKEN }} 
-        TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-        REDIS_PWD: ${{ secrets.REDIS_PWD }}
+        #   TG_TOKEN: ${{ secrets.TG_TOKEN }} 
+        #TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        #REDIS_PWD: ${{ secrets.REDIS_PWD }}
       run: |
         pip install redis
         pip install --user --upgrade git+https://github.com/twintproject/twint.git@origin/master
+     - name: run check_run and tweets_tg_notice
+       env:
+         TG_TOKEN: ${{ secrets.TG_TOKEN }}
+         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+         REDIS_PWD: ${{ secrets.REDIS_PWD }}
+       run:
         python check_run.py
         python tweets_tg_notice.py
 

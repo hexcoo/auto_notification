@@ -42,7 +42,7 @@ try:
         telegram(msg)
     tmp_battery_percent = int(tmp_battery_percent)
     if 27 > tmp_battery_percent:
-        msg='weibo_cookie_status: ' + cookie_flag + ', battery_percent: ' + tmp_battery_percent
+        msg='weibo_cookie_status: ' + cookie_flag + ', battery_percent: ' + str(tmp_battery_percent)
         telegram(msg)
     
 except Exception as e:
