@@ -36,7 +36,7 @@ try:
     tmp_flag=r.get('w-cookie')
     tmp_battery_percent=r.get('percent')
 
-    if len(tmp_flag)==2:
+    if len(tmp_flag)<=2:
         cookie_flag="expire"
         msg='weibo_cookie_status: ' + cookie_flag + ', battery_percent: ' + tmp_battery_percent
         telegram(msg)
