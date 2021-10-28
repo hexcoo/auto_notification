@@ -213,7 +213,7 @@ def main():
 #        '''
         if count > 0:
             new_timestap = formatDateTime(c.Since) + 1
-            new_since = datetime.datetime.fromtimestamp(new_timestap).strftime('%Y-%m-%d %H:%M:%S')
+            new_since = datetime.fromtimestamp(new_timestap).strftime('%Y-%m-%d %H:%M:%S')
    
             r.set('297811887', new_since)
 #        '''
