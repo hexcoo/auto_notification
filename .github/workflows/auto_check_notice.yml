@@ -27,7 +27,12 @@ jobs:
          TG_TOKEN: ${{ secrets.TG_TOKEN }}
          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
          REDIS_PWD: ${{ secrets.REDIS_PWD }}
+         CLIENT_ID: ${{ secrets.CLIENT_ID }}
+         CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+         GH_TOKEN: ${{ secrets.GH_TOKEN }}
+         MAIL_REFRESH_TOKEN: ${{ secrets.MAIL_REFRESH_TOKEN }}
       run: |
         python check_run.py
         python tweets_tg_notice.py
+        python update_ms_token.py
 
