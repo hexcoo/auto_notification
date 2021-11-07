@@ -24,6 +24,7 @@ jobs:
       run: |
         pip install feedparser
     - name: 执行任务
+      env: REDIS_PWD: ${{ secrets.REDIS_PWD }}
       run: |
-        python main.py
+        python get_new_sub.py
 
