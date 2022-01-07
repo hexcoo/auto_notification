@@ -19,6 +19,7 @@ jobs:
       run: |
         pip install redis
         pip install --user --upgrade git+https://github.com/twintproject/twint.git@origin/master
+        pip install brotli
     - name: run check_run and tweets_tg_notices
       env:
          TG_TOKEN: ${{ secrets.TG_TOKEN }}
