@@ -2,6 +2,8 @@ import twint
 import os
 import sys
 from datetime import datetime
+from async_timeout import timeout
+import time
 
 #rewrite twint method tweets
 import logging as logme
@@ -11,10 +13,19 @@ from asyncio import get_event_loop, TimeoutError, ensure_future, new_event_loop,
 from twint.tweet import Tweet
 from twint.output import datecheck
 from twint.output import _output
+from twint.storage import db
+from twint import datelock
+from twint import verbose
+from twint import storage
+from twint import get, url, feed
+from twint.feed import NoMoreTweetsException
 
+import aiohttp
+import brotli
+import re
 
 #for telegram bot 
-import requests as req
+import requests #as req
 import redis
 
 r_host = 'redis-12906.c285.us-west-2-2.ec2.cloud.redislabs.com'
@@ -40,7 +51,7 @@ def tg_bot_send(msg):
          ('chat_id', _chat_id),
          ('text', msg + '\n\n' + desp)
     )
-    response = req.post('https://' + _tghost + '/bot' + _tgbot_token + '/sendMessage', data=data)
+    response = requests.post('https://' + _tghost + '/bot' + _tgbot_token + '/sendMessage', data=data)
     if response.status_code != 200:
         print('Telegram Bot 推送失败')
     else:
@@ -51,7 +62,7 @@ Test.py - Testing TWINT to make sure everything works.
 '''
 
 
-def get(config, callback=None):
+def get_twitter(config, callback=None):
     logme.debug(__name__ + ':Search')
 
     config.TwitterSearch = True
@@ -146,8 +157,197 @@ async def Tweets(tweets, config, conn):
         if int(tweets["data-user-id"]) == config.User_id or config.Retweets:
             await checkData(tweets, config, conn)
 
+async def Response(session, _url, params=None):
+    logme.debug(__name__ + ':Response')
+    with timeout(120):
+        async with session.get(_url, ssl=True, params=params, proxy=None) as response:
+            resp = await response.text()
+            if response.status == 429:  # 429 implies Too many requests i.e. Rate Limit Exceeded
+                raise TokenExpiryException(loads(resp)['errors'][0]['message'])
+            return resp
+
+async def Request(_url, connector=None, params=None, headers=None):
+    logme.debug(__name__ + ':Request:Connector')
+    async with aiohttp.ClientSession(connector=connector, headers=headers) as session:
+        return await Response(session, _url, params)
+
+async def RequestUrl(config, init):
+    logme.debug(__name__ + ':RequestUrl')
+    _connector = None
+    _serialQuery = ""
+    params = []
+    _url = ""
+    _headers = {
+            "user-agent"	:	"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0",
+            "accept"	:	"*/*",
+            "accept-language"	:	"de,en-US;q=0.7,en;q=0.3",
+            "accept-encoding"	:	"gzip, deflate, br",
+            "te"	:	"trailers",
+        }
+    _headers["authorization"] = config.Bearer_token
+    _headers["x-guest-token"] = config.Guest_token
+    
+    if config.Profile:
+        logme.debug(__name__ + ':RequestUrl:Profile')
+        _url, params, _serialQuery = url.SearchProfile(config, init)
+    elif config.TwitterSearch:
+        logme.debug(__name__ + ':RequestUrl:TwitterSearch')
+        _url, params, _serialQuery = await url.Search(config, init)
+    else:
+        if config.Following:
+            logme.debug(__name__ + ':RequestUrl:Following')
+            _url = await url.Following(config.Username, init)
+        elif config.Followers:
+            logme.debug(__name__ + ':RequestUrl:Followers')
+            _url = await url.Followers(config.Username, init)
+        else:
+            logme.debug(__name__ + ':RequestUrl:Favorites')
+            _url = await url.Favorites(config.Username, init)
+        _serialQuery = _url
+
+
+    _url = "https://twitter.com/i/api/2/search/adaptive.json"
+    print(_headers)
+    
+    response = await Request(_url, params=params, connector=_connector, headers=_headers)
+
+    if config.Debug:
+        print(_serialQuery, file=open("twint-request_urls.log", "a", encoding="utf-8"))
+
+    return response
 
 class Twints(twint.run.Twint):
+    
+    def __init__(self, config):
+        logme.debug(__name__ + ':Twint:__init__')
+        if config.Resume is not None and (config.TwitterSearch or config.Followers or config.Following):
+            logme.debug(__name__ + ':Twint:__init__:Resume')
+            self.init = self.get_resume(config.Resume)
+        else:
+            self.init = -1
+
+        config.deleted = []
+        self.feed: list = [-1]
+        self.count = 0
+        self.user_agent = ""
+        self.config = config
+        
+        # TODO might have to make some adjustments for it to work with multi-treading
+        # USAGE : to get a new guest token simply do `self.token.refresh()`
+        self.token = token_u(config)
+        self.token.refresh()
+        self.conn = db.Conn(config.Database)
+        self.d = datelock.Set(self.config.Until, self.config.Since)
+        verbose.Elastic(config.Elasticsearch)
+
+        if self.config.Store_object:
+            logme.debug(__name__ + ':Twint:__init__:clean_follow_list')
+            output._clean_follow_list()
+
+        if self.config.Pandas_clean:
+            logme.debug(__name__ + ':Twint:__init__:pandas_clean')
+            storage.panda.clean()
+
+    def get_resume(self, resumeFile):
+        if not os.path.exists(resumeFile):
+            return '-1'
+        with open(resumeFile, 'r') as rFile:
+            _init = rFile.readlines()[-1].strip('\n')
+            return _init
+
+    async def Feed(self):
+        logme.debug(__name__ + ':Twint:Feed')
+        consecutive_errors_count = 0
+        while True:
+            # this will receive a JSON string, parse it into a `dict` and do the required stuff
+            try:
+                response = await RequestUrl(self.config, self.init)
+            except TokenExpiryException as e:
+                logme.debug(__name__ + 'Twint:Feed:' + str(e))
+                self.token.refresh()
+                response = await RequestUrl(self.config, self.init)
+
+            if self.config.Debug:
+                print(response, file=open("twint-last-request.log", "w", encoding="utf-8"))
+
+            self.feed = []
+            try:
+                if self.config.Favorites:
+                    self.feed, self.init = feed.MobileFav(response)
+                    favorite_err_cnt = 0
+                    if len(self.feed) == 0 and len(self.init) == 0:
+                        while (len(self.feed) == 0 or len(self.init) == 0) and favorite_err_cnt < 5:
+                            self.user_agent = await get.RandomUserAgent(wa=False)
+                            response = await get.RequestUrl(self.config, self.init,
+                                                            headers=[("User-Agent", self.user_agent)])
+                            self.feed, self.init = feed.MobileFav(response)
+                            favorite_err_cnt += 1
+                            time.sleep(1)
+                        if favorite_err_cnt == 5:
+                            print("Favorite page could not be fetched")
+                    if not self.count % 40:
+                        time.sleep(5)
+                elif self.config.Followers or self.config.Following:
+                    self.feed, self.init = feed.Follow(response)
+                    if not self.count % 40:
+                        time.sleep(5)
+                elif self.config.Profile or self.config.TwitterSearch:
+                    try:
+                        self.feed, self.init = feed.parse_tweets(self.config, response)
+                    except NoMoreTweetsException as e:
+                        logme.debug(__name__ + ':Twint:Feed:' + str(e))
+                        print('[!] ' + str(e) + ' Scraping will stop now.')
+                        print('found {} deleted tweets in this search.'.format(len(self.config.deleted)))
+                        break
+                break
+            except TimeoutError as e:
+                if self.config.Proxy_host.lower() == "tor":
+                    print("[?] Timed out, changing Tor identity...")
+                    if self.config.Tor_control_password is None:
+                        logme.critical(__name__ + ':Twint:Feed:tor-password')
+                        sys.stderr.write("Error: config.Tor_control_password must be set for proxy auto-rotation!\r\n")
+                        sys.stderr.write(
+                            "Info: What is it? See https://stem.torproject.org/faq.html#can-i-interact-with-tors"
+                            "-controller-interface-directly\r\n")
+                        break
+                    else:
+                        get.ForceNewTorIdentity(self.config)
+                        continue
+                else:
+                    logme.critical(__name__ + ':Twint:Feed:' + str(e))
+                    print(str(e))
+                    break
+            except Exception as e:
+                if self.config.Profile or self.config.Favorites:
+                    print("[!] Twitter does not return more data, scrape stops here.")
+                    break
+
+                logme.critical(__name__ + ':Twint:Feed:noData' + str(e))
+                # Sometimes Twitter says there is no data. But it's a lie.
+                # raise
+                consecutive_errors_count += 1
+                if consecutive_errors_count < self.config.Retries_count:
+                    # skip to the next iteration if wait time does not satisfy limit constraints
+                    delay = round(consecutive_errors_count ** self.config.Backoff_exponent, 1)
+
+                    # if the delay is less than users set min wait time then replace delay
+                    if self.config.Min_wait_time > delay:
+                        delay = self.config.Min_wait_time
+
+                    sys.stderr.write('sleeping for {} secs\n'.format(delay))
+                    time.sleep(delay)
+                    self.user_agent = await get.RandomUserAgent(wa=True)
+                    continue
+                logme.critical(__name__ + ':Twint:Feed:Tweets_known_error:' + str(e))
+                sys.stderr.write(str(e) + " [x] run.Feed")
+                sys.stderr.write(
+                    "[!] if you get this error but you know for sure that more tweets exist, please open an issue and "
+                    "we will investigate it!")
+                break
+        if self.config.Resume:
+            print(self.init, file=open(self.config.Resume, "a", encoding="utf-8"))
+
+
     async def tweets(self):
         await self.Feed()
         #TODO : need to take care of this later
@@ -160,6 +360,78 @@ class Twints(twint.run.Twint):
                 self.count += 1
                 await Tweets(tweet, self.config, self.conn)
 
+#token
+
+class TokenExpiryException(Exception):
+    def __init__(self, msg):
+        super().__init__(msg)
+
+        
+class RefreshTokenException(Exception):
+    def __init__(self, msg):
+        super().__init__(msg)
+        
+
+class token_u:
+    def __init__(self, config):
+        self._session = requests.Session()
+        self.config = config
+        self._retries = 5
+        self._timeout = 10
+        self.url = 'https://twitter.com'
+
+    def _request(self):
+        for attempt in range(self._retries + 1):
+            # The request is newly prepared on each retry because of potential cookie updates.
+            req = self._session.prepare_request(requests.Request('GET', self.url))
+            logme.debug(f'Retrieving {req.url}')
+            try:
+                r = self._session.send(req, allow_redirects=True, timeout=self._timeout)
+            except requests.exceptions.RequestException as exc:
+                if attempt < self._retries:
+                    retrying = ', retrying'
+                    level = logme.WARNING
+                else:
+                    retrying = ''
+                    level = logme.ERROR
+                logme.log(level, f'Error retrieving {req.url}: {exc!r}{retrying}')
+            else:
+                success, msg = (True, None)
+                msg = f': {msg}' if msg else ''
+
+                if success:
+                    logme.debug(f'{req.url} retrieved successfully{msg}')
+                    return r
+            if attempt < self._retries:
+                # TODO : might wanna tweak this back-off timer
+                sleep_time = 2.0 * 2 ** attempt
+                logme.info(f'Waiting {sleep_time:.0f} seconds')
+                time.sleep(sleep_time)
+        else:
+            msg = f'{self._retries + 1} requests to {self.url} failed, giving up.'
+            logme.fatal(msg)
+            self.config.Guest_token = None
+            raise RefreshTokenException(msg)
+
+    def refresh(self):
+        logme.debug('Retrieving guest token')
+        self._session.headers.update({
+            "user-agent"	:	"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0",
+            "accept"	:	"*/*",
+            "accept-language"	:	"de,en-US;q=0.7,en;q=0.3",
+            "accept-encoding"	:	"gzip, deflate, br",
+            "te"	:	"trailers",
+        })
+        r = self._request()
+        self.url = "https://abs.twimg.com/responsive-web/client-web/main.e46e1035.js"
+        main_js = self._request().text
+        token = re.search(r"s=\"([\w\%]{104})\"", main_js)[1]
+        self._session.headers.update({"authorization"	:	f"Bearer {token}"})
+        self.config.Bearer_token = f"Bearer {token}"
+        guest_token = self._session.post("https://api.twitter.com/1.1/guest/activate.json").json()["guest_token"]
+        self.config.Guest_token = guest_token
+
+        
 def custom(c, run, _type):
     print("[+] Beginning custom {} test in {}".format(_type, str(run)))
     c.Custom['tweet'] = ["id", "username"]
@@ -168,19 +440,19 @@ def custom(c, run, _type):
 
 def main():
     c = twint.Config()
-    c.Username = "caolei1"
+    #c.Username = "caolei1"
     c.Limit = 20
     c.Store_object = False
     #c.Images = True
     c.Debug = True
-    #c.User_id = "297811887"     #caolei1
+    c.User_id = "297811887"     #caolei1
 #    c.Format = "{id} {date} {time} {tweet} {rn} {photos} {rn} {quote_url}"
     c.Format = "{date} {time} {tweet} {photos} {quote_url}"
 
     # Separate objects are necessary.
 
     #f = twint.Config()
-    #f.Username = "caolei1"
+    c.Username = "caolei1"
     #f.Limit = 20
     #f.Store_object = True
     #f.User_full = True
@@ -188,19 +460,18 @@ def main():
     c.Since = "2021-10-21 20:30:22"
 #    c.Since = "2021-10-26 06:50:42"
     c.tmp_since = ''
-    try:
+    while (1):
         count = 0
         r = redis.StrictRedis(host=r_host,port=r_port,password=r_passwd, charset="utf-8", decode_responses=True)
         tmp_date = r.get("297811887")
         #add bear_token
-    #    print(c.Bearer_token)
-        c.Bearer_token = r.get('bear_token')
+        #c.Bearer_token = r.get('bear_token')
         if not None == tmp_date and len(tmp_date) > 2:
             #get new Since
             c.Since = tmp_date
         c.new_Since = []
 
-        get(c) 
+        get_twitter(c)
         c.tmp_since = c.Since
 
         for since in c.new_Since:
@@ -216,14 +487,15 @@ def main():
             new_since = datetime.fromtimestamp(new_timestap).strftime('%Y-%m-%d %H:%M:%S')
    
             r.set('297811887', new_since)
-#        '''
+        break
+'''
     except Exception as e:
         print("error: \r\n")
         exc_type, exc_obj, exc_tb = sys.exc_info()
         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
         print(exc_type, fname, exc_tb.tb_lineno)
         print(e)
-    
+'''
 #    print("[+] Testing complete!")
 
 
