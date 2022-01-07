@@ -14,14 +14,10 @@ from twint.tweet import Tweet
 from twint.output import datecheck
 from twint.output import _output
 from twint.storage import db
-from twint import datelock
-from twint import verbose
-from twint import storage
-from twint import get, url, feed
+from twint import get, url, feed, storage, verbose, datelock
 from twint.feed import NoMoreTweetsException
+from twint.get import Request, Response
 
-import aiohttp
-import brotli
 import re
 
 #for telegram bot 
@@ -47,6 +43,7 @@ def formatDateTime(datetimestamp):
         return int(datetime.strptime(datetimestamp, "%Y-%m-%d").timestamp())
 
 def tg_bot_send(msg):
+    return
     data = (
          ('chat_id', _chat_id),
          ('text', msg + '\n\n' + desp)
@@ -157,19 +154,6 @@ async def Tweets(tweets, config, conn):
         if int(tweets["data-user-id"]) == config.User_id or config.Retweets:
             await checkData(tweets, config, conn)
 
-async def Response(session, _url, params=None):
-    logme.debug(__name__ + ':Response')
-    with timeout(120):
-        async with session.get(_url, ssl=True, params=params, proxy=None) as response:
-            resp = await response.text()
-            if response.status == 429:  # 429 implies Too many requests i.e. Rate Limit Exceeded
-                raise TokenExpiryException(loads(resp)['errors'][0]['message'])
-            return resp
-
-async def Request(_url, connector=None, params=None, headers=None):
-    logme.debug(__name__ + ':Request:Connector')
-    async with aiohttp.ClientSession(connector=connector, headers=headers) as session:
-        return await Response(session, _url, params)
 
 async def RequestUrl(config, init):
     logme.debug(__name__ + ':RequestUrl')
@@ -205,10 +189,6 @@ async def RequestUrl(config, init):
             _url = await url.Favorites(config.Username, init)
         _serialQuery = _url
 
-
-    _url = "https://twitter.com/i/api/2/search/adaptive.json"
-    print(_headers)
-    
     response = await Request(_url, params=params, connector=_connector, headers=_headers)
 
     if config.Debug:
@@ -231,11 +211,9 @@ class Twints(twint.run.Twint):
         self.count = 0
         self.user_agent = ""
         self.config = config
-        
         # TODO might have to make some adjustments for it to work with multi-treading
-        # USAGE : to get a new guest token simply do `self.token.refresh()`
-        self.token = token_u(config)
-        self.token.refresh()
+        # USAGE : to get a new guest token and bearer token do `self.refresh()`
+        self.refresh()
         self.conn = db.Conn(config.Database)
         self.d = datelock.Set(self.config.Until, self.config.Since)
         verbose.Elastic(config.Elasticsearch)
@@ -247,6 +225,7 @@ class Twints(twint.run.Twint):
         if self.config.Pandas_clean:
             logme.debug(__name__ + ':Twint:__init__:pandas_clean')
             storage.panda.clean()
+
 
     def get_resume(self, resumeFile):
         if not os.path.exists(resumeFile):
@@ -264,7 +243,7 @@ class Twints(twint.run.Twint):
                 response = await RequestUrl(self.config, self.init)
             except TokenExpiryException as e:
                 logme.debug(__name__ + 'Twint:Feed:' + str(e))
-                self.token.refresh()
+                self.refresh()
                 response = await RequestUrl(self.config, self.init)
 
             if self.config.Debug:
@@ -360,75 +339,22 @@ class Twints(twint.run.Twint):
                 self.count += 1
                 await Tweets(tweet, self.config, self.conn)
 
-#token
-
-class TokenExpiryException(Exception):
-    def __init__(self, msg):
-        super().__init__(msg)
-
-        
-class RefreshTokenException(Exception):
-    def __init__(self, msg):
-        super().__init__(msg)
-        
-
-class token_u:
-    def __init__(self, config):
-        self._session = requests.Session()
-        self.config = config
-        self._retries = 5
-        self._timeout = 10
-        self.url = 'https://twitter.com'
-
-    def _request(self):
-        for attempt in range(self._retries + 1):
-            # The request is newly prepared on each retry because of potential cookie updates.
-            req = self._session.prepare_request(requests.Request('GET', self.url))
-            logme.debug(f'Retrieving {req.url}')
-            try:
-                r = self._session.send(req, allow_redirects=True, timeout=self._timeout)
-            except requests.exceptions.RequestException as exc:
-                if attempt < self._retries:
-                    retrying = ', retrying'
-                    level = logme.WARNING
-                else:
-                    retrying = ''
-                    level = logme.ERROR
-                logme.log(level, f'Error retrieving {req.url}: {exc!r}{retrying}')
-            else:
-                success, msg = (True, None)
-                msg = f': {msg}' if msg else ''
-
-                if success:
-                    logme.debug(f'{req.url} retrieved successfully{msg}')
-                    return r
-            if attempt < self._retries:
-                # TODO : might wanna tweak this back-off timer
-                sleep_time = 2.0 * 2 ** attempt
-                logme.info(f'Waiting {sleep_time:.0f} seconds')
-                time.sleep(sleep_time)
-        else:
-            msg = f'{self._retries + 1} requests to {self.url} failed, giving up.'
-            logme.fatal(msg)
-            self.config.Guest_token = None
-            raise RefreshTokenException(msg)
-
+#token     
     def refresh(self):
+        _session = requests.Session()
         logme.debug('Retrieving guest token')
-        self._session.headers.update({
+        _session.headers.update({
             "user-agent"	:	"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0",
             "accept"	:	"*/*",
             "accept-language"	:	"de,en-US;q=0.7,en;q=0.3",
             "accept-encoding"	:	"gzip, deflate, br",
             "te"	:	"trailers",
         })
-        r = self._request()
-        self.url = "https://abs.twimg.com/responsive-web/client-web/main.e46e1035.js"
-        main_js = self._request().text
+        main_js = _session.get("https://abs.twimg.com/responsive-web/client-web/main.e46e1035.js").text
         token = re.search(r"s=\"([\w\%]{104})\"", main_js)[1]
-        self._session.headers.update({"authorization"	:	f"Bearer {token}"})
+        _session.headers.update({"authorization"	:	f"Bearer {token}"})
         self.config.Bearer_token = f"Bearer {token}"
-        guest_token = self._session.post("https://api.twitter.com/1.1/guest/activate.json").json()["guest_token"]
+        guest_token = _session.post("https://api.twitter.com/1.1/guest/activate.json").json()["guest_token"]
         self.config.Guest_token = guest_token
 
         
