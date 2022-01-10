@@ -27,7 +27,7 @@ r_passwd = os.getenv('REDIS_PWD')
 _tghost = 'api.telegram.org'
 _tgbot_token = os.getenv('TG_TOKEN')
 
-_chat_id = '-1001710535265'#os.getenv('TG_CHAT_ID')
+_chat_id = os.getenv('TG_CHAT_ID')
 
 
 desp = ''
@@ -259,7 +259,6 @@ def main():
         if not None == tmp_date and len(tmp_date) > 2:
             #get new Since
             c.Since = tmp_date
-            c.Since = "2022-1-7 20:30:22"
         c.new_Since = []
 
         get_twitter(c)
