@@ -39,7 +39,6 @@ def formatDateTime(datetimestamp):
         return int(datetime.strptime(datetimestamp, "%Y-%m-%d").timestamp())
 
 def tg_bot_send(msg):
-    return
     data = (
          ('chat_id', _chat_id),
          ('text', msg + '\n\n' + desp)
