@@ -13,6 +13,7 @@ jobs:
     - name: Install requests and redis and run #安装requests模块
       # env: 
         #github的账号信息
+        #
         #   TG_TOKEN: ${{ secrets.TG_TOKEN }} 
         #TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         #REDIS_PWD: ${{ secrets.REDIS_PWD }}
