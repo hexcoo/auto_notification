@@ -107,16 +107,16 @@ try:
  #   print(refresh_token)
     #get update_token
     refresh_token, access_token = getmstoken(refresh_token, client_id, client_secret)
-    if not refresh_token == None:
+    #if not refresh_token == None:
         #r.set('mail_refresh_token', refresh_token)
-        r.set('mail_access_token', access_token)
+    r.set('mail_access_token', access_token)
     #else:
         #r.set('mail_refresh_token', refresh_token)
 
     #update github secret
-        str_name = 'MAIL_REFRESH_TOKEN'
-        encrypted_value=createsecret(getpublickey(Auth, geturl), refresh_token)
-        setsecret(encrypted_value, skey_id,gh_repo, str_name)
+    str_name = 'MAIL_REFRESH_TOKEN'
+    encrypted_value=createsecret(getpublickey(Auth, geturl), refresh_token)
+    setsecret(encrypted_value, skey_id,gh_repo, str_name)
 
 #        print('get access_token: \n')
 #        print(access_token)
