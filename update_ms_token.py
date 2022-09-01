@@ -16,7 +16,8 @@ def getpublickey(Auth,geturl):
     if 'key' in jsontxt:
         print("公钥获取成功")
     else:
-        print("公钥获取失败，请检查secret里 GH_TOKEN 格式与设置是否正确")
+        #print("公钥获取失败，请检查secret里 GH_TOKEN 格式与设置是否正确")
+        print(jsontxt)
 
     public_key = jsontxt['key']
     global key_id 
