@@ -102,9 +102,8 @@ try:
 
     r= redis.StrictRedis(host=r_host,port=r_port,password=r_passwd, charset="utf-8", decode_responses=True)
     #get token
-    refresh_token = r.get('mail_refresh_token')
-    if None == refresh_token:
-        refresh_token = os.getenv('MAIL_REFRESH_TOKEN')
+    
+    refresh_token = os.getenv('MAIL_REFRESH_TOKEN')
  #   print(refresh_token)
     #get update_token
     refresh_token, access_token = getmstoken(refresh_token, client_id, client_secret)
