@@ -58,7 +58,7 @@ def slack_send(channel, msg):
         "icon_emoji": ":robot_face:"
     }
     
-    response = requests.post(_slack_host, json=data)
+    response = requests.post(_slack_webhook, json=data)
     if response.status_code != 200:
         print(response.text)
         print('Slack failure')
