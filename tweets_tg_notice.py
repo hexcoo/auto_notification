@@ -53,7 +53,7 @@ def tg_bot_send(msg):
 def slack_send(channel, msg):
     data = {
         "channel": channel,
-        "username":"arm-test",
+        "username":"github_action",
         "text": msg + "\n\n" ,
         "icon_emoji": ":robot_face:"
     }
