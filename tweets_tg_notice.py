@@ -29,6 +29,8 @@ _tgbot_token = os.getenv('TG_TOKEN')
 
 _chat_id = os.getenv('TG_CHAT_ID')
 
+_slack_webhook = os.getenv('SLACK_HOOK')
+_slack_channel = '#twitter'
 
 desp = ''
 
@@ -48,6 +50,23 @@ def tg_bot_send(msg):
         print('Telegram Bot 推送失败')
     else:
         print('Telegram Bot 推送成功')
+
+        
+        
+ def slack_send(channel, msg):
+    data = {
+        "channel": channel,
+        "username":"arm-test",
+        "text": msg + "\n\n" ,
+        "icon_emoji": ":robot_face:"
+    }
+    
+    response = requests.post(_slack_host, json=data)
+    if response.status_code != 200:
+        print(response.text)
+        print('Slack failure')
+    else:
+        print('Slack  success')
 
 '''
 Test.py - Testing TWINT to make sure everything works.
@@ -133,6 +152,8 @@ async def checkData(tweet, config, conn):
         _output(tweet, output, config)
         #telegram bot send 
         tg_bot_send(output)
+        #slack_bot send
+        slack_send(_slack_channel, output)
 
 
 async def Tweets(tweets, config, conn):
