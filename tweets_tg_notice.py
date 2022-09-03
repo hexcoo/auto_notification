@@ -39,7 +39,6 @@ def formatDateTime(datetimestamp):
         return int(datetime.strptime(datetimestamp, "%Y-%m-%d %H:%M:%S").timestamp())
     except ValueError:
         return int(datetime.strptime(datetimestamp, "%Y-%m-%d").timestamp())
-
 def tg_bot_send(msg):
     data = (
          ('chat_id', _chat_id),
@@ -51,9 +50,7 @@ def tg_bot_send(msg):
     else:
         print('Telegram Bot 推送成功')
 
-        
-        
- def slack_send(channel, msg):
+def slack_send(channel, msg):
     data = {
         "channel": channel,
         "username":"arm-test",
@@ -66,7 +63,7 @@ def tg_bot_send(msg):
         print(response.text)
         print('Slack failure')
     else:
-        print('Slack  success')
+        print('Slack success')
 
 '''
 Test.py - Testing TWINT to make sure everything works.
