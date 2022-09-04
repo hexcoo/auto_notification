@@ -57,7 +57,9 @@ def slack_send(channel, msg):
         "text": msg + "\n\n" ,
         "icon_emoji": ":robot_face:"
     }
-    
+    if _slack_webhook == None:
+        print('set webhook first')
+        return
     response = requests.post(_slack_webhook, json=data)
     if response.status_code != 200:
         print(response.text)
