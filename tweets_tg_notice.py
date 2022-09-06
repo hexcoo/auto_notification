@@ -108,7 +108,7 @@ def format(config, t):
         output = output.replace("{place}", t.place)
         output = output.replace("{timezone}", t.timezone)
         output = output.replace("{urls}", ",".join(t.urls))
-        output = output.replace("{photos}", ",".join(t.photos))
+        output = output.replace("{photos}", "\n".join(t.photos))
         output = output.replace("{video}", str(t.video))
         output = output.replace("{thumbnail}", t.thumbnail)
         output = output.replace("{tweet}", t.tweet)
