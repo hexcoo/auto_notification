@@ -1,6 +1,6 @@
 name: auto_check_notice
 on:
-  workflow_dispatch:
+  push:
   schedule:
     - cron: '*/30 * * * *'   
 jobs:
