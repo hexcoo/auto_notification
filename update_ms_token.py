@@ -83,7 +83,7 @@ def createsecret(public_key,secret_value):
 gh_token=os.getenv('GH_TOKEN')
 client_id=os.getenv('CLIENT_ID')
 client_secret=os.getenv('CLIENT_SECRET')
-heartbeat = os.getenv('GITACTION_HEARTBEAT)
+heartbeat = os.getenv('GITACTION_HEARTBEAT')
                       
 r_host = 'redis-12906.c285.us-west-2-2.ec2.cloud.redislabs.com'
 r_port = 12906
