@@ -83,7 +83,7 @@ def createsecret(public_key,secret_value):
 gh_token=os.getenv('GH_TOKEN')
 client_id=os.getenv('CLIENT_ID')
 client_secret=os.getenv('CLIENT_SECRET')
-heartbeat = os.getenv('GITACTION_HEARTBEAT')
+heartbeat=os.getenv('GITACTION_HEARTBEAT')
                       
 r_host = 'redis-12906.c285.us-west-2-2.ec2.cloud.redislabs.com'
 r_port = 12906
@@ -119,8 +119,8 @@ try:
     str_name = 'MAIL_REFRESH_TOKEN'
 #    encrypted_value=createsecret(getpublickey(Auth, geturl), refresh_token)
 #    setsecret(encrypted_value, skey_id,gh_repo, str_name)
-    print(heartbeat)
-    #req.get(heartbeat, timeout=3)
+    #print(heartbeat)
+    req.get(heartbeat, timeout=3)
 #        print('get access_token: \n')
 #        print(access_token)
 #        print('get refresh_token')
