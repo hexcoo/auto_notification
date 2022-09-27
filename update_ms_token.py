@@ -117,8 +117,8 @@ try:
 
     #update github secret
     str_name = 'MAIL_REFRESH_TOKEN'
-    encrypted_value=createsecret(getpublickey(Auth, geturl), refresh_token)
-    setsecret(encrypted_value, skey_id,gh_repo, str_name)
+#    encrypted_value=createsecret(getpublickey(Auth, geturl), refresh_token)
+#    setsecret(encrypted_value, skey_id,gh_repo, str_name)
     req.get(heartbeat, timeout=3)
 #        print('get access_token: \n')
 #        print(access_token)
