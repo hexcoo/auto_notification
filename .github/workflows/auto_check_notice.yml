@@ -30,6 +30,7 @@ jobs:
          GH_TOKEN: ${{ secrets.GH_TOKEN }}
          MAIL_REFRESH_TOKEN: ${{ secrets.MAIL_REFRESH_TOKEN }}
          SLACK_HOOK: ${{ secrets.SLACK_HOOK }}
+         GITACTION_HEARTBEAT: ${{ GITACTION_HEARTBEAT }}
       run: |
         python check_run.py
         python tweets_tg_notice.py
