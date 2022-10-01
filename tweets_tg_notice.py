@@ -55,7 +55,7 @@ def slack_send(channel, msg):
         "channel": channel,
         "username":"github_action",
         "text": msg + "\n\n" ,
-        "icon_emoji": ":robot_face:"
+        "icon_emoji": ":github:"
     }
     if _slack_webhook == None:
         print('set webhook first')
