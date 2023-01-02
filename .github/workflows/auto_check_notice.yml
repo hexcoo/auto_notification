@@ -19,6 +19,7 @@ jobs:
         #REDIS_PWD: ${{ secrets.REDIS_PWD }}
       run: |
         pip install redis
+        pip install pynacl
         pip install --user --upgrade git+https://github.com/twintproject/twint.git@origin/master
     - name: run check_run and tweets_tg_notices
       env:
