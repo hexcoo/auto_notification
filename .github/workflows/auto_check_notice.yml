@@ -20,7 +20,7 @@ jobs:
       run: |
         pip install redis
         pip install pynacl
-        pip install --user --upgrade git+https://github.com/twintproject/twint.git@origin/master
+        pip install twint && pip install --user --upgrade git+https://github.com/twintproject/twint.git@origin/master#egg=twint
     - name: run check_run and tweets_tg_notices
       env:
          TG_TOKEN: ${{ secrets.TG_TOKEN }}
