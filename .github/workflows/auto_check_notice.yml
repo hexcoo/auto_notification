@@ -34,6 +34,6 @@ jobs:
          HEARTBEAT: ${{ secrets.GITACTION_HEARTBEAT }}
       run: |
         python check_run.py
-        python tweets_tg_notice.py
+        #python tweets_tg_notice.py
         python update_ms_token.py
 
